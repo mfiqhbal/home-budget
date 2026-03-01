@@ -30,6 +30,25 @@ interface WiringTableProps {
   currency: string;
 }
 
+const LOCATION_ICONS: Record<string, string> = {
+  kitchen: "🍳",
+  bathroom: "🚿",
+  bedroom: "🛏️",
+  "living room": "🛋️",
+  garage: "🚗",
+  laundry: "🧺",
+  outdoor: "🌳",
+  office: "💼",
+};
+
+function getLocationIcon(location: string) {
+  const lower = location.toLowerCase();
+  for (const [key, icon] of Object.entries(LOCATION_ICONS)) {
+    if (lower.includes(key)) return icon;
+  }
+  return "⚡";
+}
+
 export function WiringTable({ grouped, projectId, currency }: WiringTableProps) {
   const router = useRouter();
 
@@ -46,33 +65,52 @@ export function WiringTable({ grouped, projectId, currency }: WiringTableProps) 
 
   const locations = Object.keys(grouped).sort();
 
+  // Calculate max cost for relative bar widths
+  const locationTotals = locations.map(loc => {
+    return grouped[loc].reduce((sum, p) => {
+      const unit = parseFloat(p.price_per_unit || "0");
+      const install = parseFloat(p.installation_price || "0");
+      const qty = p.quantity || 1;
+      return sum + (unit * qty) + install;
+    }, 0);
+  });
+  const maxTotal = Math.max(...locationTotals, 1);
+
   return (
     <div className="space-y-6">
-      {locations.map((location) => {
+      {locations.map((location, locIdx) => {
         const plans = grouped[location];
-        const locationTotal = plans.reduce((sum, p) => {
-          const unit = parseFloat(p.price_per_unit || "0");
-          const install = parseFloat(p.installation_price || "0");
-          const qty = p.quantity || 1;
-          return sum + (unit * qty) + install;
-        }, 0);
+        const locationTotal = locationTotals[locIdx];
+        const barWidth = (locationTotal / maxTotal) * 100;
 
         return (
           <GlassCard key={location} className="p-0 overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/20 flex items-center justify-between">
-              <h3 className="font-semibold">{location}</h3>
-              <CurrencyDisplay amount={locationTotal} currency={currency} size="sm" />
+            <div className="px-6 py-4 border-b border-border/20 bg-gradient-to-r from-copper/[0.03] to-transparent">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-heading font-semibold flex items-center gap-2">
+                  <span>{getLocationIcon(location)}</span>
+                  {location}
+                </h3>
+                <CurrencyDisplay amount={locationTotal} currency={currency} size="sm" />
+              </div>
+              {/* Cost bar */}
+              <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-copper/60 transition-all duration-500"
+                  style={{ width: `${barWidth}%` }}
+                />
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Machine/Appliance</TableHead>
-                  <TableHead>Plug Location</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Install</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="font-body">Machine/Appliance</TableHead>
+                  <TableHead className="font-body">Plug Location</TableHead>
+                  <TableHead className="font-body">Type</TableHead>
+                  <TableHead className="font-body">Qty</TableHead>
+                  <TableHead className="text-right font-body">Unit Price</TableHead>
+                  <TableHead className="text-right font-body">Install</TableHead>
+                  <TableHead className="text-right font-body">Subtotal</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
@@ -83,18 +121,18 @@ export function WiringTable({ grouped, projectId, currency }: WiringTableProps) 
                   const qty = plan.quantity || 1;
                   const subtotal = unit * qty + install;
                   return (
-                    <TableRow key={plan.id}>
+                    <TableRow key={plan.id} className="hover:bg-copper/[0.02]">
                       <TableCell>
                         <div>
-                          <span className="font-medium">{plan.machine || "-"}</span>
-                          {plan.notes && <p className="text-xs text-muted-foreground">{plan.notes}</p>}
+                          <span className="font-medium font-body">{plan.machine || "-"}</span>
+                          {plan.notes && <p className="text-xs text-muted-foreground font-body">{plan.notes}</p>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{plan.plug_location || "-"}</TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm font-body">{plan.plug_location || "-"}</TableCell>
+                      <TableCell className="text-sm font-body">
                         {[plan.plug_type, plan.wiring_type].filter(Boolean).join(", ") || "-"}
                       </TableCell>
-                      <TableCell>{qty}</TableCell>
+                      <TableCell className="font-body">{qty}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatCurrency(unit, currency)}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatCurrency(install, currency)}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-medium">{formatCurrency(subtotal, currency)}</TableCell>
@@ -124,6 +162,16 @@ export function WiringTable({ grouped, projectId, currency }: WiringTableProps) 
                     </TableRow>
                   );
                 })}
+                {/* Subtotal row */}
+                <TableRow className="bg-copper/[0.03] font-medium">
+                  <TableCell colSpan={6} className="text-right text-sm text-muted-foreground font-body">
+                    Subtotal
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm font-semibold">
+                    {formatCurrency(locationTotal, currency)}
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
               </TableBody>
             </Table>
           </GlassCard>

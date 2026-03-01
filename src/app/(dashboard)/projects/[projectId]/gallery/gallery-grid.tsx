@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Pencil, ExternalLink, ImagePlus, Loader2, MapPin, ZoomIn, Upload } from "lucide-react";
+import { Trash2, ExternalLink, ImagePlus, Loader2, MapPin, ZoomIn, Upload } from "lucide-react";
 import { GalleryDialog } from "./gallery-dialog";
 import { deleteGalleryImage } from "./actions";
 import type { GalleryItemWithImages } from "./actions";
@@ -57,7 +56,6 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
   }
 
   function openLightbox(galleryItem: GalleryItemWithImages, imageIndex: number) {
-    // Find the flat index
     let flatIdx = 0;
     for (const item of filtered) {
       if (item.id === galleryItem.id) {
@@ -135,10 +133,10 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
             onClick={() => setFilter(null)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all font-body ${
               filter === null
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                : "bg-white/40 hover:bg-white/60 text-foreground/80 border border-white/30"
+                ? "bg-copper text-white shadow-md shadow-copper/25"
+                : "bg-white/40 hover:bg-white/60 text-foreground/80 border border-border/30"
             }`}
           >
             All ({items.length})
@@ -147,10 +145,10 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
             <button
               key={room}
               onClick={() => setFilter(room)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all font-body ${
                 filter === room
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                  : "bg-white/40 hover:bg-white/60 text-foreground/80 border border-white/30"
+                  ? "bg-copper text-white shadow-md shadow-copper/25"
+                  : "bg-white/40 hover:bg-white/60 text-foreground/80 border border-border/30"
               }`}
             >
               {room} ({roomCounts[room] || 0})
@@ -164,7 +162,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
         {filtered.map((item) => (
           <div
             key={item.id}
-            className="break-inside-avoid group relative rounded-2xl overflow-hidden bg-white/40 backdrop-blur-sm border border-white/30 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+            className="break-inside-avoid group relative rounded-2xl overflow-hidden glass shadow-sm hover:shadow-xl hover:shadow-copper/5 transition-all duration-300"
           >
             {/* Images */}
             {item.images.length > 0 ? (
@@ -194,7 +192,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                   {/* Room badge */}
                   {item.room && (
                     <div className="absolute top-3 left-3">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md text-white border border-white/10">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md text-white border border-white/10 font-body">
                         <MapPin className="w-3 h-3" />
                         {item.room}
                       </span>
@@ -204,7 +202,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                   {/* Image count badge */}
                   {item.images.length > 1 && (
                     <div className="absolute top-3 right-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md text-white border border-white/10">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md text-white border border-white/10 font-body">
                         <ImagePlus className="w-3 h-3" />
                         {item.images.length}
                       </span>
@@ -219,7 +217,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                       <button
                         key={img.id}
                         onClick={() => openLightbox(item, idx + 1)}
-                        className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/30 hover:border-primary/50 transition-colors shrink-0"
+                        className="relative w-14 h-14 rounded-lg overflow-hidden border border-border/30 hover:border-copper/50 transition-colors shrink-0"
                       >
                         <Image
                           src={img.public_url}
@@ -233,7 +231,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                     {item.images.length > 5 && (
                       <button
                         onClick={() => openLightbox(item, 5)}
-                        className="w-14 h-14 rounded-lg bg-black/5 border border-white/30 flex items-center justify-center text-xs font-semibold text-muted-foreground hover:bg-black/10 transition-colors shrink-0"
+                        className="w-14 h-14 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-center text-xs font-semibold text-muted-foreground hover:bg-muted/50 transition-colors shrink-0 font-body"
                       >
                         +{item.images.length - 5}
                       </button>
@@ -243,18 +241,18 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
               </div>
             ) : (
               /* Empty state - upload prompt */
-              <label className="flex flex-col items-center justify-center py-12 px-6 cursor-pointer hover:bg-white/20 transition-colors">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+              <label className="flex flex-col items-center justify-center py-12 px-6 cursor-pointer hover:bg-copper/5 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-copper/10 flex items-center justify-center mb-3">
                   {uploadingId === item.id ? (
-                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    <Loader2 className="w-6 h-6 text-copper animate-spin" />
                   ) : (
-                    <Upload className="w-6 h-6 text-primary" />
+                    <Upload className="w-6 h-6 text-copper" />
                   )}
                 </div>
-                <p className="text-sm font-medium text-foreground/80 mb-1">
+                <p className="text-sm font-medium text-foreground/80 mb-1 font-body">
                   {uploadingId === item.id ? "Uploading..." : "Upload images"}
                 </p>
-                <p className="text-xs text-muted-foreground">Click to browse</p>
+                <p className="text-xs text-muted-foreground font-body">Click to browse</p>
                 <input
                   type="file"
                   accept="image/*"
@@ -270,11 +268,11 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-foreground truncate">
+                  <h3 className="font-heading font-semibold text-foreground truncate">
                     {item.title || "Untitled"}
                   </h3>
                   {item.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2 font-body">
                       {item.description}
                     </p>
                   )}
@@ -283,7 +281,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                 {/* Action buttons - visible on hover */}
                 <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {/* Upload more */}
-                  <label className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 cursor-pointer transition-colors">
+                  <label className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-copper/5 cursor-pointer transition-colors">
                     {uploadingId === item.id ? (
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                     ) : (
@@ -326,7 +324,7 @@ export function GalleryGrid({ items, projectId, rooms }: GalleryGridProps) {
                   href={item.coohom_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 mt-2 font-medium"
+                  className="inline-flex items-center gap-1.5 text-xs text-copper hover:text-copper/80 mt-2 font-medium font-body"
                 >
                   <ExternalLink className="w-3 h-3" />
                   View in Coohom

@@ -15,11 +15,11 @@ const barConfig: ChartConfig = {
 };
 
 const PIE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
+  "#0D9488",
+  "#CD8C3C",
+  "#22C55E",
+  "#D4A050",
+  "#3B82F6",
 ];
 
 interface BudgetChartsProps {
@@ -34,22 +34,33 @@ export function BudgetCharts({ categoryData, pieData, currency }: BudgetChartsPr
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <GlassCard>
-        <h3 className="font-semibold mb-4">Estimate vs Actual by Category</h3>
-        <ChartContainer config={barConfig} className="h-[300px] w-full">
+    <div className="grid gap-3 lg:grid-cols-2">
+      <GlassCard className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-heading font-semibold text-sm">Estimate vs Actual by Category</h3>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-1 text-[10px] font-body text-muted-foreground">
+              <span className="w-2 h-2 rounded-full bg-primary" />Estimate
+            </div>
+            <div className="flex items-center gap-1 text-[10px] font-body text-muted-foreground">
+              <span className="w-2 h-2 rounded-full bg-copper" />Actual
+            </div>
+          </div>
+        </div>
+        <ChartContainer config={barConfig} className="h-[250px] w-full">
           <BarChart data={categoryData}>
             <XAxis
               dataKey="name"
               tickLine={false}
               axisLine={false}
-              fontSize={12}
-              tickFormatter={(value) => value.length > 10 ? value.slice(0, 10) + "..." : value}
+              fontSize={10}
+              tickFormatter={(value) => value.length > 8 ? value.slice(0, 8) + ".." : value}
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              fontSize={12}
+              fontSize={10}
+              width={50}
               tickFormatter={(value) => `${currency} ${(value / 1000).toFixed(0)}k`}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
@@ -59,9 +70,9 @@ export function BudgetCharts({ categoryData, pieData, currency }: BudgetChartsPr
         </ChartContainer>
       </GlassCard>
 
-      <GlassCard>
-        <h3 className="font-semibold mb-4">Budget Distribution</h3>
-        <ChartContainer config={pieConfig} className="h-[300px] w-full">
+      <GlassCard className="p-4">
+        <h3 className="font-heading font-semibold text-sm mb-3">Budget Distribution</h3>
+        <ChartContainer config={pieConfig} className="h-[220px] w-full">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent />} />
             <Pie
@@ -70,8 +81,8 @@ export function BudgetCharts({ categoryData, pieData, currency }: BudgetChartsPr
               nameKey="name"
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={100}
+              innerRadius={50}
+              outerRadius={85}
               paddingAngle={2}
             >
               {pieData.map((_, index) => (
@@ -80,6 +91,14 @@ export function BudgetCharts({ categoryData, pieData, currency }: BudgetChartsPr
             </Pie>
           </PieChart>
         </ChartContainer>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-2">
+          {pieData.map((d, i) => (
+            <div key={d.name} className="flex items-center gap-1 text-[10px] font-body text-muted-foreground">
+              <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+              {d.name}
+            </div>
+          ))}
+        </div>
       </GlassCard>
     </div>
   );

@@ -83,7 +83,7 @@ function EditableCell({
   if (!editing) {
     return (
       <span
-        className={`cursor-pointer hover:bg-white/40 rounded px-1.5 py-0.5 -mx-1.5 transition-colors ${className}`}
+        className={`cursor-pointer hover:bg-copper/5 rounded px-1.5 py-0.5 -mx-1.5 transition-colors ${className}`}
         onClick={() => { setDraft(value); setEditing(true); }}
         title="Click to edit"
       >
@@ -105,7 +105,7 @@ function EditableCell({
         if (e.key === "Escape") cancel();
         if (e.key === "Tab") commit();
       }}
-      className="glass-input rounded px-1.5 py-0.5 text-sm w-full outline-none border border-primary/30 focus:border-primary"
+      className="glass-input rounded px-1.5 py-0.5 text-sm w-full outline-none border border-copper/30 focus:border-copper"
     />
   );
 }
@@ -160,9 +160,9 @@ function CompareButton({
       disabled={loading}
       className={`inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors ${
         hasSelected
-          ? "bg-primary/10 text-primary hover:bg-primary/20"
+          ? "bg-copper/10 text-copper hover:bg-copper/20"
           : linked
-            ? "text-primary/60 hover:bg-primary/10 hover:text-primary"
+            ? "text-copper/60 hover:bg-copper/10 hover:text-copper"
             : "text-muted-foreground/40 hover:bg-muted/30 hover:text-muted-foreground opacity-0 group-hover:opacity-100"
       }`}
       title={
@@ -234,7 +234,7 @@ function QuickAddRow({
         <TableCell colSpan={7}>
           <button
             onClick={() => { setActive(true); setTimeout(() => nameRef.current?.focus(), 50); }}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors py-1"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-copper transition-colors py-1 font-body"
           >
             <Plus className="w-3.5 h-3.5" />
             Add item to {category}
@@ -245,7 +245,7 @@ function QuickAddRow({
   }
 
   return (
-    <TableRow className="bg-primary/5">
+    <TableRow className="bg-copper/5">
       <TableCell>
         <input
           ref={nameRef}
@@ -253,7 +253,7 @@ function QuickAddRow({
           onChange={(e) => setForm({ ...form, itemName: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
           placeholder="Item name *"
-          className="glass-input rounded px-1.5 py-1 text-sm w-full outline-none border border-primary/30 focus:border-primary"
+          className="glass-input rounded px-1.5 py-1 text-sm w-full outline-none border border-copper/30 focus:border-copper"
         />
       </TableCell>
       <TableCell>
@@ -262,14 +262,14 @@ function QuickAddRow({
           onChange={(e) => setForm({ ...form, type: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
           placeholder="Type"
-          className="glass-input rounded px-1.5 py-1 text-sm w-full outline-none border border-primary/30 focus:border-primary"
+          className="glass-input rounded px-1.5 py-1 text-sm w-full outline-none border border-copper/30 focus:border-copper"
         />
       </TableCell>
       <TableCell>
         <select
           value={form.priority}
           onChange={(e) => setForm({ ...form, priority: e.target.value })}
-          className="glass-input rounded px-1.5 py-1 text-sm outline-none border border-primary/30"
+          className="glass-input rounded px-1.5 py-1 text-sm outline-none border border-copper/30"
         >
           <option value="1">P1</option>
           <option value="2">P2</option>
@@ -284,7 +284,7 @@ function QuickAddRow({
           onChange={(e) => setForm({ ...form, estimateAmount: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
           placeholder="0.00"
-          className="glass-input rounded px-1.5 py-1 text-sm w-full text-right outline-none border border-primary/30 focus:border-primary font-mono"
+          className="glass-input rounded px-1.5 py-1 text-sm w-full text-right outline-none border border-copper/30 focus:border-copper font-mono"
         />
       </TableCell>
       <TableCell>
@@ -295,13 +295,13 @@ function QuickAddRow({
           onChange={(e) => setForm({ ...form, actualAmount: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
           placeholder="0.00"
-          className="glass-input rounded px-1.5 py-1 text-sm w-full text-right outline-none border border-primary/30 focus:border-primary font-mono"
+          className="glass-input rounded px-1.5 py-1 text-sm w-full text-right outline-none border border-copper/30 focus:border-copper font-mono"
         />
       </TableCell>
       <TableCell />
       <TableCell>
         <div className="flex gap-1 justify-end">
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={save} disabled={saving}>
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-copper" onClick={save} disabled={saving}>
             <Check className="w-4 h-4" />
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={reset}>
@@ -352,25 +352,87 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
   if (categories.length === 0) {
     return (
       <GlassCard className="text-center py-12">
-        <p className="text-muted-foreground mb-4">No budget items yet.</p>
+        <p className="text-muted-foreground mb-4 font-body">No budget items yet.</p>
         <NewCategoryRow projectId={projectId} onAdded={refresh} />
       </GlassCard>
     );
   }
 
+  const difference = totalEstimate - totalActual;
+  const utilization = totalEstimate > 0 ? Math.min((totalActual / totalEstimate) * 100, 100) : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
+      {/* Sticky totals bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+        <div className="md:ml-64 pointer-events-auto">
+          <div
+            className="mx-4 md:mx-6 mb-4 rounded-xl px-5 py-3 flex items-center justify-between gap-4"
+            style={{
+              background: "rgba(30, 30, 42, 0.92)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 -4px 30px rgba(0,0,0,0.15)",
+            }}
+          >
+            {/* Left: label + progress bar */}
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="font-heading font-semibold text-white text-sm shrink-0">Total</span>
+              <div className="hidden sm:flex items-center gap-2 min-w-0">
+                <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${utilization}%`,
+                      background: utilization > 100 ? "#EF4444" : utilization > 80 ? "#F59E0B" : "#10B981",
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  {Math.round(utilization)}%
+                </span>
+              </div>
+            </div>
+
+            {/* Right: numbers */}
+            <div className="flex items-center gap-5 md:gap-8 shrink-0">
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>Estimate</p>
+                <CurrencyDisplay amount={totalEstimate} currency={currency} size="sm" className="text-white font-semibold" />
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>Actual</p>
+                <CurrencyDisplay amount={totalActual} currency={currency} size="sm" className="text-white font-semibold" />
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  {difference >= 0 ? "Remaining" : "Over"}
+                </p>
+                <CurrencyDisplay
+                  amount={Math.abs(difference)}
+                  currency={currency}
+                  size="sm"
+                  className={`font-semibold ${difference >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {categories.map((category) => {
         const items = grouped[category];
         const catEstimate = items.reduce((s, i) => s + parseFloat(i.estimate_amount || "0"), 0);
         const catActual = items.reduce((s, i) => s + parseFloat(i.actual_amount || "0"), 0);
+        const catRatio = catEstimate > 0 ? Math.min((catActual / catEstimate) * 100, 150) : 0;
 
         return (
           <GlassCard key={category} className="p-0 overflow-hidden">
-            <div className="px-6 py-3 border-b border-white/20">
+            <div className="px-6 py-3 border-b border-border/20 bg-gradient-to-r from-copper/[0.03] to-transparent">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{category}</h3>
-                <div className="flex gap-4 text-sm">
+                <h3 className="font-heading font-semibold">{category}</h3>
+                <div className="flex gap-4 text-sm font-body">
                   <span className="text-muted-foreground">
                     Est: <span className="font-mono">{formatCurrency(catEstimate, currency)}</span>
                   </span>
@@ -379,15 +441,24 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
                   </span>
                 </div>
               </div>
+              {/* Category progress bar */}
+              <div className="mt-2 h-1 rounded-full bg-muted/50 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    catRatio > 100 ? "bg-destructive" : catRatio > 80 ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
+                  style={{ width: `${Math.min(catRatio, 100)}%` }}
+                />
+              </div>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[28%]">Item</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="w-[60px]">Pri</TableHead>
-                  <TableHead className="text-right">Estimate</TableHead>
-                  <TableHead className="text-right">Actual</TableHead>
+                  <TableHead className="w-[28%] font-body">Item</TableHead>
+                  <TableHead className="font-body">Type</TableHead>
+                  <TableHead className="w-[60px] font-body">Pri</TableHead>
+                  <TableHead className="text-right font-body">Estimate</TableHead>
+                  <TableHead className="text-right font-body">Actual</TableHead>
                   <TableHead className="w-[40px]" />
                   <TableHead className="w-[50px]" />
                 </TableRow>
@@ -395,8 +466,13 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
               <TableBody>
                 {items.map((item) => {
                   const linked = linkedComparisons[item.id];
+                  const est = parseFloat(item.estimate_amount || "0");
+                  const act = parseFloat(item.actual_amount || "0");
+                  const overBudget = est > 0 && act > est;
+                  const nearBudget = est > 0 && act > est * 0.8 && act <= est;
+
                   return (
-                    <TableRow key={item.id} className="group">
+                    <TableRow key={item.id} className="group hover:bg-copper/[0.02]">
                       <TableCell>
                         <EditableCell
                           value={item.item_name}
@@ -405,11 +481,10 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
                           className="font-medium"
                         />
                         {item.notes && (
-                          <p className="text-xs text-muted-foreground mt-0.5 px-1.5">{item.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 px-1.5 font-body">{item.notes}</p>
                         )}
-                        {/* Show selected product info */}
                         {linked?.selectedProduct && (
-                          <p className="text-xs text-primary/70 mt-0.5 px-1.5 truncate">
+                          <p className="text-xs text-copper/70 mt-0.5 px-1.5 truncate font-body">
                             {linked.selectedProduct}
                             {linked.supplierName ? ` (${linked.supplierName})` : ""}
                           </p>
@@ -442,7 +517,9 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
                           value={item.actual_amount || "0"}
                           onSave={(v) => handleInlineUpdate(item, "actual_amount", v)}
                           type="number"
-                          className="font-mono text-right"
+                          className={`font-mono text-right ${
+                            overBudget ? "text-destructive" : nearBudget ? "text-amber-600" : ""
+                          }`}
                         />
                       </TableCell>
                       <TableCell>
@@ -474,27 +551,6 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
 
       {/* Add new category */}
       <NewCategoryRow projectId={projectId} onAdded={refresh} />
-
-      {/* Totals */}
-      <GlassCard>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-lg">Total</span>
-          <div className="flex gap-8">
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Estimate</p>
-              <CurrencyDisplay amount={totalEstimate} currency={currency} size="lg" />
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Actual</p>
-              <CurrencyDisplay amount={totalActual} currency={currency} size="lg" />
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Difference</p>
-              <CurrencyDisplay amount={totalEstimate - totalActual} currency={currency} size="lg" />
-            </div>
-          </div>
-        </div>
-      </GlassCard>
     </div>
   );
 }
@@ -531,8 +587,8 @@ function NewCategoryRow({ projectId, onAdded }: { projectId: string; onAdded: ()
 
   if (!active) {
     return (
-      <GlassCard className="border-dashed border-2 border-primary/20 bg-transparent text-center py-4 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setActive(true)}>
-        <span className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+      <GlassCard className="border-dashed border-2 border-copper/20 bg-transparent text-center py-4 cursor-pointer hover:border-copper/40 transition-colors" onClick={() => setActive(true)}>
+        <span className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground font-body">
           <Plus className="w-4 h-4" />
           Add new category
         </span>
@@ -544,46 +600,46 @@ function NewCategoryRow({ projectId, onAdded }: { projectId: string; onAdded: ()
     <GlassCard>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Category *</label>
+          <label className="text-xs text-muted-foreground mb-1 block font-body">Category *</label>
           <select
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-primary/30"
+            className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-copper/30"
           >
             <option value="">Select...</option>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Item Name *</label>
+          <label className="text-xs text-muted-foreground mb-1 block font-body">Item Name *</label>
           <input
             value={form.itemName}
             onChange={(e) => setForm({ ...form, itemName: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setActive(false); }}
             placeholder="Item name"
-            className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-primary/30 focus:border-primary"
+            className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-copper/30 focus:border-copper"
           />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Estimate</label>
+          <label className="text-xs text-muted-foreground mb-1 block font-body">Estimate</label>
           <input
             type="number" step="0.01"
             value={form.estimateAmount}
             onChange={(e) => setForm({ ...form, estimateAmount: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") save(); }}
             placeholder="0.00"
-            className="glass-input rounded px-2 py-1.5 text-sm w-full text-right outline-none border border-primary/30 focus:border-primary font-mono"
+            className="glass-input rounded px-2 py-1.5 text-sm w-full text-right outline-none border border-copper/30 focus:border-copper font-mono"
           />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Actual</label>
+          <label className="text-xs text-muted-foreground mb-1 block font-body">Actual</label>
           <input
             type="number" step="0.01"
             value={form.actualAmount}
             onChange={(e) => setForm({ ...form, actualAmount: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") save(); }}
             placeholder="0.00"
-            className="glass-input rounded px-2 py-1.5 text-sm w-full text-right outline-none border border-primary/30 focus:border-primary font-mono"
+            className="glass-input rounded px-2 py-1.5 text-sm w-full text-right outline-none border border-copper/30 focus:border-copper font-mono"
           />
         </div>
         <div className="flex items-end gap-2">

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { GlassCard } from "@/components/shared/glass-card";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { PriorityBadge } from "@/components/shared/priority-badge";
-import { DollarSign, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { BudgetCharts } from "./budget-charts";
 
 async function getBudgetSummary(projectId: string) {
@@ -61,6 +61,10 @@ export default async function ProjectDashboardPage({
     value: values.estimate,
   }));
 
+  const utilizationPercent = summary.totalEstimate > 0
+    ? Math.round((summary.totalActual / summary.totalEstimate) * 100)
+    : 0;
+
   return (
     <div>
       <PageHeader
@@ -68,79 +72,94 @@ export default async function ProjectDashboardPage({
         description={project.description || "Project dashboard"}
       />
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <GlassCard>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <DollarSign className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Estimate</p>
-              <CurrencyDisplay amount={summary.totalEstimate} currency={project.currency} size="lg" />
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Actual</p>
-              <CurrencyDisplay amount={summary.totalActual} currency={project.currency} size="lg" />
+      {/* Hero section */}
+      <GlassCard className="mb-4 relative overflow-hidden">
+        <div className="flex items-center gap-8">
+          {/* Circular progress ring */}
+          <div className="relative w-24 h-24 shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#E7E0D8" strokeWidth="7" />
+              <circle
+                cx="50" cy="50" r="42" fill="none"
+                stroke="#CD8C3C"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - Math.min(utilizationPercent, 100) / 100)}`}
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl font-heading font-bold text-gradient">{utilizationPercent}%</span>
+              <span className="text-[10px] text-muted-foreground font-body">used</span>
             </div>
           </div>
-        </GlassCard>
 
-        <GlassCard>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${summary.difference >= 0 ? "bg-emerald-500/10" : "bg-destructive/10"}`}>
-              <TrendingDown className={`w-5 h-5 ${summary.difference >= 0 ? "text-emerald-600" : "text-destructive"}`} />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {summary.difference >= 0 ? "Under Budget" : "Over Budget"}
-              </p>
-              <CurrencyDisplay amount={Math.abs(summary.difference)} currency={project.currency} size="lg" />
-            </div>
+          <div>
+            <p className="text-sm text-muted-foreground font-body mb-1">Total Budget</p>
+            <CurrencyDisplay amount={summary.totalEstimate} currency={project.currency} size="lg" className="text-3xl text-gradient font-heading" />
+            <p className="text-sm text-muted-foreground font-body mt-1">
+              <CurrencyDisplay amount={summary.totalActual} currency={project.currency} size="sm" /> spent so far
+            </p>
           </div>
-        </GlassCard>
+        </div>
+      </GlassCard>
 
-        <GlassCard>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Budget Items</p>
-              <p className="text-xl font-semibold">{summary.itemCount}</p>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Priority Summary */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
-        {summary.byPriority.map((p) => (
-          <GlassCard key={p.priority}>
-            <div className="flex items-center justify-between mb-2">
-              <PriorityBadge priority={p.priority} />
-              <span className="text-sm text-muted-foreground">{p.count} items</span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Estimate</span>
-                <CurrencyDisplay amount={p.estimate} currency={project.currency} size="sm" />
+      {/* Summary Cards — compact */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-4">
+        {[
+          { icon: DollarSign, label: "Total Estimate", amount: summary.totalEstimate, iconBg: "bg-primary/10", iconColor: "text-primary" },
+          { icon: TrendingUp, label: "Total Actual", amount: summary.totalActual, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-600" },
+          { icon: TrendingDown, label: summary.difference >= 0 ? "Under Budget" : "Over Budget", amount: Math.abs(summary.difference), iconBg: summary.difference >= 0 ? "bg-emerald-500/10" : "bg-destructive/10", iconColor: summary.difference >= 0 ? "text-emerald-600" : "text-destructive" },
+          { icon: Layers, label: "Budget Items", amount: null as number | null, count: summary.itemCount, iconBg: "bg-copper/10", iconColor: "text-copper" },
+        ].map((card) => (
+          <GlassCard key={card.label} className="py-3 px-4">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-1.5 rounded-lg ${card.iconBg}`}>
+                <card.icon className={`w-4 h-4 ${card.iconColor}`} />
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Actual</span>
-                <CurrencyDisplay amount={p.actual} currency={project.currency} size="sm" />
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground font-body">{card.label}</p>
+                {card.amount !== null ? (
+                  <CurrencyDisplay amount={card.amount} currency={project.currency} size="sm" className="font-semibold" />
+                ) : (
+                  <p className="text-base font-heading font-semibold">{card.count}</p>
+                )}
               </div>
             </div>
           </GlassCard>
         ))}
+      </div>
+
+      {/* Priority Summary — compact */}
+      <div className="grid gap-3 sm:grid-cols-3 mb-4">
+        {summary.byPriority.map((p) => {
+          const ratio = p.estimate > 0 ? Math.min((p.actual / p.estimate) * 100, 100) : 0;
+          return (
+            <GlassCard key={p.priority} variant="accent" className="py-3 px-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <PriorityBadge priority={p.priority} />
+                <span className="text-xs text-muted-foreground font-body">{p.count} items</span>
+              </div>
+              <div className="flex justify-between text-sm font-body">
+                <div>
+                  <span className="text-muted-foreground text-xs">Estimate </span>
+                  <CurrencyDisplay amount={p.estimate} currency={project.currency} size="sm" className="text-xs" />
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Actual </span>
+                  <CurrencyDisplay amount={p.actual} currency={project.currency} size="sm" className="text-xs" />
+                </div>
+              </div>
+              <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${ratio > 100 ? "bg-destructive" : ratio > 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+                  style={{ width: `${ratio}%` }}
+                />
+              </div>
+            </GlassCard>
+          );
+        })}
       </div>
 
       {/* Charts */}

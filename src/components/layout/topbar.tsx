@@ -17,7 +17,7 @@ export function Topbar({ projectId, projectName }: TopbarProps) {
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "BN";
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 md:px-6 border-b border-white/20 sticky top-0 z-40 bg-white/80 backdrop-blur-xl">
+    <header className="h-14 flex items-center justify-between px-4 md:px-6 border-b border-border/30 sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
       <div className="md:hidden">
         <Sheet>
           <SheetTrigger asChild>
@@ -34,11 +34,11 @@ export function Topbar({ projectId, projectName }: TopbarProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground hidden sm:block">
+        <span className="text-sm text-muted-foreground hidden sm:block font-body">
           {user?.email}
         </span>
-        <Avatar className="w-8 h-8">
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+        <Avatar className="w-8 h-8 ring-2 ring-transparent hover:ring-copper/40 transition-all">
+          <AvatarFallback className="bg-copper/10 text-copper text-xs font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
