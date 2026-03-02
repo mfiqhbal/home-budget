@@ -11,7 +11,7 @@ export async function getBudgetItems(projectId: string) {
     .select("*")
     .eq("project_id", projectId)
     .order("category")
-    .order("priority")
+    .order("sort_order")
     .order("created_at");
 
   if (error) throw error;
@@ -221,6 +221,24 @@ export async function saveCategoryOrders(projectId: string, categories: string[]
     .insert(rows);
 
   if (error) throw error;
+  revalidatePath(`/projects/${projectId}/budget`);
+}
+
+export async function saveBudgetItemOrder(projectId: string, itemIds: string[]) {
+  const supabase = await createClient();
+
+  // Update sort_order for each item
+  const updates = itemIds.map((id, i) =>
+    supabase
+      .from("budget_items")
+      .update({ sort_order: i, updated_at: new Date().toISOString() })
+      .eq("id", id)
+  );
+
+  const results = await Promise.all(updates);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+
   revalidatePath(`/projects/${projectId}/budget`);
 }
 

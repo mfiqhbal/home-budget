@@ -28,6 +28,7 @@ create table budget_items (
   estimate_amount numeric(12,2) default 0,
   actual_amount numeric(12,2) default 0,
   priority integer default 3 not null check (priority between 1 and 3),
+  sort_order integer default 0 not null,
   notes text,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null

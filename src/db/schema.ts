@@ -32,6 +32,7 @@ export const budgetItems = pgTable("budget_items", {
   estimateAmount: numeric("estimate_amount", { precision: 12, scale: 2 }).default("0"),
   actualAmount: numeric("actual_amount", { precision: 12, scale: 2 }).default("0"),
   priority: integer("priority").default(3).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

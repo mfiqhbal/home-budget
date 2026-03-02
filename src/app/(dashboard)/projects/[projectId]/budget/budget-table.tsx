@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Trash2, Plus, Check, X, GitCompareArrows, GripVertical, ChevronsUpDown, ChevronDown, ChevronRight } from "lucide-react";
-import { createBudgetItem, updateBudgetItem, deleteBudgetItem, getOrCreateComparison, saveCategoryOrders } from "./actions";
+import { createBudgetItem, updateBudgetItem, deleteBudgetItem, getOrCreateComparison, saveCategoryOrders, saveBudgetItemOrder } from "./actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
@@ -32,11 +32,73 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const CATEGORIES = [
+const CATEGORY_PRESETS = [
   "Kitchen", "Bathroom", "Bedroom", "Living Room", "Wiring",
   "Plumbing", "Flooring", "Painting", "Furniture", "Appliances",
   "Exterior", "Other",
 ];
+
+const CUSTOM_VALUE = "__custom__";
+
+// Category select with presets + custom text input
+function CategorySelect({
+  value,
+  onChange,
+  className = "",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  className?: string;
+}) {
+  const [isCustom, setIsCustom] = useState(value !== "" && !CATEGORY_PRESETS.includes(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value;
+    if (v === CUSTOM_VALUE) {
+      setIsCustom(true);
+      onChange("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      setIsCustom(false);
+      onChange(v);
+    }
+  }
+
+  if (isCustom) {
+    return (
+      <div className="flex gap-1.5">
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type category name"
+          className={`glass-input rounded px-2 py-1.5 text-sm flex-1 outline-none border border-copper/30 focus:border-copper ${className}`}
+        />
+        <button
+          type="button"
+          onClick={() => { setIsCustom(false); onChange(""); }}
+          className="text-muted-foreground hover:text-foreground transition-colors px-1"
+          title="Back to presets"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={handleSelectChange}
+      className={`glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-copper/30 ${className}`}
+    >
+      <option value="">Select...</option>
+      {CATEGORY_PRESETS.map((c) => <option key={c} value={c}>{c}</option>)}
+      <option value={CUSTOM_VALUE}>Custom...</option>
+    </select>
+  );
+}
 
 interface BudgetItemRow {
   id: string;
@@ -299,7 +361,7 @@ function QuickAddRow({
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
-          placeholder="Type"
+          placeholder="Remark"
           className="glass-input rounded px-1.5 py-1 text-sm w-full outline-none border border-copper/30 focus:border-copper"
         />
       </TableCell>
@@ -400,14 +462,7 @@ function AddCategoryPopover({ projectId, onAdded }: { projectId: string; onAdded
           <p className="text-sm font-heading font-semibold">Add new category</p>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block font-body">Category *</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-copper/30"
-            >
-              <option value="">Select...</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <CategorySelect value={form.category} onChange={(v) => setForm({ ...form, category: v })} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block font-body">Item Name *</label>
@@ -457,6 +512,126 @@ function AddCategoryPopover({ projectId, onAdded }: { projectId: string; onAdded
   );
 }
 
+// Sortable item row within a category
+function SortableItemRow({
+  item,
+  linked,
+  onInlineUpdate,
+  onDelete,
+  projectId,
+}: {
+  item: BudgetItemRow;
+  linked?: LinkedComparison;
+  onInlineUpdate: (item: BudgetItemRow, field: string, value: string) => void;
+  onDelete: (itemId: string) => void;
+  projectId: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    position: "relative" as const,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const est = parseFloat(item.estimate_amount || "0");
+  const act = parseFloat(item.actual_amount || "0");
+  const overBudget = est > 0 && act > est;
+  const nearBudget = est > 0 && act > est * 0.8 && act <= est;
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className="group hover:bg-copper/[0.02]">
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          <button
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors touch-none opacity-0 group-hover:opacity-100 shrink-0"
+            {...attributes}
+            {...listeners}
+            title="Drag to reorder"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <EditableCell
+              value={item.item_name}
+              onSave={(v) => onInlineUpdate(item, "item_name", v)}
+              placeholder="Item name"
+              className="font-medium"
+            />
+            {item.notes && (
+              <p className="text-xs text-muted-foreground mt-0.5 px-1.5 font-body">{item.notes}</p>
+            )}
+            {linked?.selectedProduct && (
+              <p className="text-xs text-copper/70 mt-0.5 px-1.5 truncate font-body">
+                {linked.selectedProduct}
+                {linked.supplierName ? ` (${linked.supplierName})` : ""}
+              </p>
+            )}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <EditableCell
+          value={item.type || ""}
+          onSave={(v) => onInlineUpdate(item, "type", v)}
+          placeholder="Remark"
+          className="text-muted-foreground"
+        />
+      </TableCell>
+      <TableCell>
+        <PriorityPicker
+          priority={item.priority}
+          onSave={(p) => onInlineUpdate(item, "priority", String(p))}
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <EditableCell
+          value={item.estimate_amount || "0"}
+          onSave={(v) => onInlineUpdate(item, "estimate_amount", v)}
+          type="number"
+          className="font-mono text-right"
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <EditableCell
+          value={item.actual_amount || "0"}
+          onSave={(v) => onInlineUpdate(item, "actual_amount", v)}
+          type="number"
+          className={`font-mono text-right ${
+            overBudget ? "text-destructive" : nearBudget ? "text-amber-600" : ""
+          }`}
+        />
+      </TableCell>
+      <TableCell>
+        <CompareButton
+          projectId={projectId}
+          budgetItemId={item.id}
+          linked={linked}
+        />
+      </TableCell>
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => onDelete(item.id)}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 // Sortable wrapper for a category card
 function SortableCategoryCard({
   category,
@@ -469,6 +644,7 @@ function SortableCategoryCard({
   onAdded,
   collapsed,
   onToggleCollapse,
+  onItemReorder,
 }: {
   category: string;
   items: BudgetItemRow[];
@@ -480,6 +656,7 @@ function SortableCategoryCard({
   onAdded: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  onItemReorder: (category: string, itemIds: string[]) => void;
 }) {
   const {
     attributes,
@@ -496,6 +673,28 @@ function SortableCategoryCard({
     zIndex: isDragging ? 10 : undefined,
     opacity: isDragging ? 0.85 : undefined,
   };
+
+  const [orderedItems, setOrderedItems] = useState(items);
+
+  useEffect(() => {
+    setOrderedItems(items);
+  }, [items]);
+
+  const itemSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleItemDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedItems.findIndex((i) => i.id === active.id);
+    const newIndex = orderedItems.findIndex((i) => i.id === over.id);
+    const reordered = arrayMove(orderedItems, oldIndex, newIndex);
+    setOrderedItems(reordered);
+    onItemReorder(category, reordered.map((i) => i.id));
+  }
 
   const catEstimate = items.reduce((s, i) => s + parseFloat(i.estimate_amount || "0"), 0);
   const catActual = items.reduce((s, i) => s + parseFloat(i.actual_amount || "0"), 0);
@@ -547,100 +746,36 @@ function SortableCategoryCard({
           </div>
         </div>
         {!collapsed && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[28%] font-body">Item</TableHead>
-                <TableHead className="font-body">Type</TableHead>
-                <TableHead className="w-[60px] font-body">Pri</TableHead>
-                <TableHead className="text-right font-body">Estimate</TableHead>
-                <TableHead className="text-right font-body">Actual</TableHead>
-                <TableHead className="w-[40px]" />
-                <TableHead className="w-[50px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => {
-                const linked = linkedComparisons[item.id];
-                const est = parseFloat(item.estimate_amount || "0");
-                const act = parseFloat(item.actual_amount || "0");
-                const overBudget = est > 0 && act > est;
-                const nearBudget = est > 0 && act > est * 0.8 && act <= est;
-
-                return (
-                  <TableRow key={item.id} className="group hover:bg-copper/[0.02]">
-                    <TableCell>
-                      <EditableCell
-                        value={item.item_name}
-                        onSave={(v) => onInlineUpdate(item, "item_name", v)}
-                        placeholder="Item name"
-                        className="font-medium"
-                      />
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-0.5 px-1.5 font-body">{item.notes}</p>
-                      )}
-                      {linked?.selectedProduct && (
-                        <p className="text-xs text-copper/70 mt-0.5 px-1.5 truncate font-body">
-                          {linked.selectedProduct}
-                          {linked.supplierName ? ` (${linked.supplierName})` : ""}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <EditableCell
-                        value={item.type || ""}
-                        onSave={(v) => onInlineUpdate(item, "type", v)}
-                        placeholder="Type"
-                        className="text-muted-foreground"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <PriorityPicker
-                        priority={item.priority}
-                        onSave={(p) => onInlineUpdate(item, "priority", String(p))}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <EditableCell
-                        value={item.estimate_amount || "0"}
-                        onSave={(v) => onInlineUpdate(item, "estimate_amount", v)}
-                        type="number"
-                        className="font-mono text-right"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <EditableCell
-                        value={item.actual_amount || "0"}
-                        onSave={(v) => onInlineUpdate(item, "actual_amount", v)}
-                        type="number"
-                        className={`font-mono text-right ${
-                          overBudget ? "text-destructive" : nearBudget ? "text-amber-600" : ""
-                        }`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <CompareButton
-                        projectId={projectId}
-                        budgetItemId={item.id}
-                        linked={linked}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => onDelete(item.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </TableCell>
+          <DndContext id={`items-${category}`} sensors={itemSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+            <SortableContext items={orderedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[28%] font-body">Item</TableHead>
+                    <TableHead className="font-body">Remark</TableHead>
+                    <TableHead className="w-[60px] font-body">Pri</TableHead>
+                    <TableHead className="text-right font-body">Estimate</TableHead>
+                    <TableHead className="text-right font-body">Actual</TableHead>
+                    <TableHead className="w-[40px]" />
+                    <TableHead className="w-[50px]" />
                   </TableRow>
-                );
-              })}
-              <QuickAddRow projectId={projectId} category={category} onAdded={onAdded} />
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {orderedItems.map((item) => (
+                    <SortableItemRow
+                      key={item.id}
+                      item={item}
+                      linked={linkedComparisons[item.id]}
+                      onInlineUpdate={onInlineUpdate}
+                      onDelete={onDelete}
+                      projectId={projectId}
+                    />
+                  ))}
+                  <QuickAddRow projectId={projectId} category={category} onAdded={onAdded} />
+                </TableBody>
+              </Table>
+            </SortableContext>
+          </DndContext>
         )}
       </GlassCard>
     </div>
@@ -711,6 +846,14 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
       await saveCategoryOrders(projectId, reordered);
     } catch {
       toast.error("Failed to save order");
+    }
+  }
+
+  async function handleItemReorder(_category: string, itemIds: string[]) {
+    try {
+      await saveBudgetItemOrder(projectId, itemIds);
+    } catch {
+      toast.error("Failed to save item order");
     }
   }
 
@@ -823,7 +966,7 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
         </div>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext id="budget-categories" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={categories} strategy={verticalListSortingStrategy}>
           {categories.map((category) => {
             const items = grouped[category];
@@ -841,6 +984,7 @@ export function BudgetTable({ grouped, projectId, currency, totalEstimate, total
                 onAdded={refresh}
                 collapsed={collapsedSet.has(category)}
                 onToggleCollapse={() => toggleCollapse(category)}
+                onItemReorder={handleItemReorder}
               />
             );
           })}
@@ -897,14 +1041,7 @@ function NewCategoryRow({ projectId, onAdded }: { projectId: string; onAdded: ()
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div>
           <label className="text-xs text-muted-foreground mb-1 block font-body">Category *</label>
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="glass-input rounded px-2 py-1.5 text-sm w-full outline-none border border-copper/30"
-          >
-            <option value="">Select...</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <CategorySelect value={form.category} onChange={(v) => setForm({ ...form, category: v })} />
         </div>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block font-body">Item Name *</label>
