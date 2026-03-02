@@ -223,4 +223,19 @@
     color: oklch(0.45 0.02 230);
     border: 1px solid oklch(0.7 0.01 210 / 30%);
   }
+
+  .animate-page-in {
+    animation: pageIn 0.3s ease-out both;
+  }
+
+  @keyframes pageIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
