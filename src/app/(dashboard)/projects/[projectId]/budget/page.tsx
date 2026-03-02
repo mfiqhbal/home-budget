@@ -1,4 +1,4 @@
-import { getBudgetItems, getLinkedComparisons } from "./actions";
+import { getBudgetItems, getLinkedComparisons, getCategoryOrders } from "./actions";
 import { getProject } from "../../actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { BudgetTable } from "./budget-table";
@@ -9,10 +9,11 @@ export default async function BudgetPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const [project, items, linkedComparisons] = await Promise.all([
+  const [project, items, linkedComparisons, categoryOrders] = await Promise.all([
     getProject(projectId),
     getBudgetItems(projectId),
     getLinkedComparisons(projectId),
+    getCategoryOrders(projectId),
   ]);
 
   // Group by category
@@ -43,6 +44,7 @@ export default async function BudgetPage({
         totalEstimate={totalEstimate}
         totalActual={totalActual}
         linkedComparisons={linkedComparisons}
+        categoryOrders={categoryOrders}
       />
     </div>
   );

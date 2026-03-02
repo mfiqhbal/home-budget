@@ -6,17 +6,18 @@ interface PriorityBadgeProps {
 }
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
+  const p = Number(priority);
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        priority === 1 && "priority-p1",
-        priority === 2 && "priority-p2",
-        priority === 3 && "priority-p3",
+        p === 1 && "priority-p1",
+        p === 2 && "priority-p2",
+        p === 3 && "priority-p3",
         className
       )}
     >
-      P{priority}
+      P{p}
     </span>
   );
 }

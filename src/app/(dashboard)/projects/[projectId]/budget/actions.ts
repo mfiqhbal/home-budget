@@ -154,7 +154,7 @@ export async function updateBudgetItem(projectId: string, itemId: string, formDa
 
   const parsed = budgetItemSchema.parse(raw);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("budget_items")
     .update({
       category: parsed.category,
@@ -166,11 +166,62 @@ export async function updateBudgetItem(projectId: string, itemId: string, formDa
       notes: parsed.notes,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .select();
+
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("Update failed — row not found or RLS denied");
+  revalidatePath(`/projects/${projectId}/budget`);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function getCategoryOrders(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("budget_category_orders")
+    .select("category, sort_order")
+    .eq("project_id", projectId)
+    .order("sort_order");
+
+  if (error) {
+    // Table might not exist yet — return empty so app still works
+    console.warn("getCategoryOrders:", error.message);
+    return {};
+  }
+
+  const map: Record<string, number> = {};
+  for (const row of data ?? []) {
+    map[row.category] = row.sort_order;
+  }
+  return map;
+}
+
+export async function saveCategoryOrders(projectId: string, categories: string[]) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Delete existing orders for this project+user
+  await supabase
+    .from("budget_category_orders")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("user_id", user.id);
+
+  // Insert new order
+  const rows = categories.map((category, i) => ({
+    project_id: projectId,
+    user_id: user.id,
+    category,
+    sort_order: i,
+  }));
+
+  const { error } = await supabase
+    .from("budget_category_orders")
+    .insert(rows);
 
   if (error) throw error;
   revalidatePath(`/projects/${projectId}/budget`);
-  revalidatePath(`/projects/${projectId}`);
 }
 
 export async function deleteBudgetItem(projectId: string, itemId: string) {

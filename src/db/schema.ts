@@ -152,6 +152,17 @@ export const images = pgTable("images", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const budgetCategoryOrders = pgTable("budget_category_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .references(() => projects.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id").notNull(),
+  category: text("category").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Type exports
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
@@ -171,3 +182,5 @@ export type GalleryImage = typeof galleryImages.$inferSelect;
 export type NewGalleryImage = typeof galleryImages.$inferInsert;
 export type ImageRecord = typeof images.$inferSelect;
 export type NewImageRecord = typeof images.$inferInsert;
+export type BudgetCategoryOrder = typeof budgetCategoryOrders.$inferSelect;
+export type NewBudgetCategoryOrder = typeof budgetCategoryOrders.$inferInsert;

@@ -125,6 +125,17 @@ create table gallery_images (
   updated_at timestamptz default now() not null
 );
 
+-- Budget category orders table
+create table budget_category_orders (
+  id uuid default uuid_generate_v4() primary key,
+  project_id uuid references projects(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  category text not null,
+  sort_order integer default 0 not null,
+  created_at timestamptz default now() not null,
+  unique(project_id, user_id, category)
+);
+
 -- Images table (polymorphic)
 create table images (
   id uuid default uuid_generate_v4() primary key,
@@ -149,6 +160,7 @@ alter table suppliers enable row level security;
 alter table checklist_items enable row level security;
 alter table wiring_plans enable row level security;
 alter table gallery_images enable row level security;
+alter table budget_category_orders enable row level security;
 alter table images enable row level security;
 
 -- Projects policies
@@ -198,6 +210,12 @@ create policy "Users can view own gallery_images" on gallery_images for select u
 create policy "Users can create own gallery_images" on gallery_images for insert with check (auth.uid() = user_id);
 create policy "Users can update own gallery_images" on gallery_images for update using (auth.uid() = user_id);
 create policy "Users can delete own gallery_images" on gallery_images for delete using (auth.uid() = user_id);
+
+-- Budget category orders policies
+create policy "Users can view own budget_category_orders" on budget_category_orders for select using (auth.uid() = user_id);
+create policy "Users can create own budget_category_orders" on budget_category_orders for insert with check (auth.uid() = user_id);
+create policy "Users can update own budget_category_orders" on budget_category_orders for update using (auth.uid() = user_id);
+create policy "Users can delete own budget_category_orders" on budget_category_orders for delete using (auth.uid() = user_id);
 
 -- Images policies
 create policy "Users can view own images" on images for select using (auth.uid() = user_id);
